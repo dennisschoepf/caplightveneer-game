@@ -12,9 +12,13 @@ void clearAllLEDs();
 void lightLine(int lineIndex, uint32_t color);
 void winAnimation();
 void looseAnimation();
+void startGame();
 
 bool testRun = true;
 bool isTouched = false;
+bool gameStarted = false;
+bool isUpwards = false;
+int currentlyLightedRowIndex = 0;
 
 /* Set up neopixel led strip as described in their documentation */
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
@@ -35,19 +39,55 @@ void setup()
   strip.setBrightness(50);
 
   pinMode(SENSOR_PIN, INPUT);
+  currentlyLightedRowIndex = LED_PER_LINE_COUNT - 1;
+  gameStarted = true;
 }
 
 void loop()
 {
-  if (testRun == true)
-  {
-    looseAnimation();
-    winAnimation();
-    testRun = false;
-  }
-
-  /* Digital Read from capacitative sensor, 1 == isTouched */
   isTouched = digitalRead(SENSOR_PIN);
+
+  if (gameStarted)
+  {
+    lightLine(currentlyLightedRowIndex, strip.Color(255, 0, 0));
+    delay(300);
+
+    Serial.print("Index: ");
+    Serial.println(currentlyLightedRowIndex);
+    Serial.print("Is Touched: ");
+    Serial.println(isTouched);
+    if (isTouched == 1 && currentlyLightedRowIndex < 3 && currentlyLightedRowIndex >= 0)
+    {
+      // Go up again
+      isUpwards = true;
+    }
+    else if (currentlyLightedRowIndex <= 0)
+    {
+      // Game lost
+      gameStarted = false;
+      looseAnimation();
+    }
+
+    lightLine(currentlyLightedRowIndex, strip.Color(0, 0, 0));
+
+    if (!isUpwards)
+    {
+      currentlyLightedRowIndex--;
+    }
+    else if (currentlyLightedRowIndex >= LED_PER_LINE_COUNT - 1)
+    {
+      isUpwards = false;
+      currentlyLightedRowIndex--;
+    }
+    else
+    {
+      currentlyLightedRowIndex++;
+    }
+  }
+}
+
+void lightLinesUpwards(int rowIndex)
+{
 }
 
 void winAnimation()
