@@ -7,9 +7,13 @@
 #define LED_LINE_COUNT 3
 #define LED_PER_LINE_COUNT 8
 
-void wave();
+void flashAllLEDs(uint32_t color);
+void clearAllLEDs();
 void lightLine(int lineIndex, uint32_t color);
+void winAnimation();
+void looseAnimation();
 
+bool testRun = true;
 bool isTouched = false;
 
 /* Set up neopixel led strip as described in their documentation */
@@ -28,73 +32,72 @@ void setup()
   /* Basic strip setup, adjust brightness as needed */
   strip.begin();
   strip.show();
-  strip.setBrightness(200);
+  strip.setBrightness(50);
 
   pinMode(SENSOR_PIN, INPUT);
 }
 
 void loop()
 {
+  if (testRun == true)
+  {
+    looseAnimation();
+    winAnimation();
+    testRun = false;
+  }
+
   /* Digital Read from capacitative sensor, 1 == isTouched */
   isTouched = digitalRead(SENSOR_PIN);
+}
 
-  if (isTouched == true)
+void winAnimation()
+{
+  for (int i = LED_PER_LINE_COUNT - 1; i >= 0; i--)
   {
-    Serial.println("Is touched");
-    wave();
-    strip.clear();
-    strip.show();
-    /* Set isTouched to false after illuminating once in order to not immediately re-trigger the light sequence */
-    isTouched = false;
+    lightLine(i, strip.Color(0, 255, 0));
+    delay(100);
   }
-  else
+  delay(500);
+  clearAllLEDs();
+  delay(300);
+  flashAllLEDs(strip.Color(0, 255, 0));
+  delay(300);
+  clearAllLEDs();
+}
+
+void looseAnimation()
+{
+  for (int i = 0; i < 2; i++)
   {
-    strip.clear();
-    strip.show();
+    flashAllLEDs(strip.Color(255, 0, 0));
+    delay(300);
+    clearAllLEDs();
+    delay(300);
+  }
+
+  flashAllLEDs(strip.Color(255, 0, 0));
+  delay(300);
+
+  for (int i = LED_PER_LINE_COUNT; i > 0; i--)
+  {
+    lightLine(i - 1, strip.Color(0, 0, 0));
+    delay(300 / i);
   }
 }
 
-void wave()
+void flashAllLEDs(uint32_t color)
 {
-  /* Loop through all LED lines (1 LED per strip depending on the matrix setup) to create wave/ripple effect */
-  for (int i = 0; i < LED_PER_LINE_COUNT; i++)
+  for (int i = 0; i < LED_COUNT; i++)
   {
-    if (i <= LED_PER_LINE_COUNT / 2)
-    {
-      /* Turn on the first half of LED lines rather fast to support the animation */
-      lightLine(i, strip.Color(255, 0, 0));
-      delay(15 + i * 10);
-    }
-    else if (i == LED_PER_LINE_COUNT / 2 + 1)
-    {
-      /* Begin to shut off the first LEDs as soon as the animation went through half of the LED lines */
-      lightLine(0, strip.Color(0, 0, 0));
-      lightLine(5, strip.Color(255, 0, 0));
-      delay(80);
-
-      /* Loop through the first half of LED lines to turn them off again */
-      for (int j = 0; j < LED_PER_LINE_COUNT / 2 + 1; j++)
-      {
-        lightLine(j, strip.Color(0, 0, 0));
-        delay(50 + j * 17.5);
-      }
-    }
-    else if (i <= LED_PER_LINE_COUNT * 3 / 4)
-    {
-      lightLine(i, strip.Color(255, 0, 0));
-      lightLine(i - 1, strip.Color(0, 0, 0));
-      delay(100 + i * 7.5);
-    }
-    else if (i == LED_PER_LINE_COUNT - 1)
-    {
-      /* Increase delay for the last LED lines */
-      lightLine(i, strip.Color(255, 0, 0));
-      delay(125 + i * 20);
-      lightLine(i - 1, strip.Color(0, 0, 0));
-      delay(125 + i * 20);
-      lightLine(i, strip.Color(0, 0, 0));
-    }
+    strip.setPixelColor(i, color);
   }
+  strip.show();
+}
+
+void clearAllLEDs()
+{
+  strip.clear();
+  strip.show();
 }
 
 void lightLine(int lineIndex, uint32_t color)
