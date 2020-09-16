@@ -70,11 +70,11 @@ void restartGame()
 
 void startGameLoop()
 {
-  int difficulty = int(100 / (gameLoopCounter + 1));
+  int difficulty = int(250 / (gameLoopCounter + 1));
 
   /* Light up the current row */
   lightLine(currentlyLightedRowIndex, strip.Color(255, 0, 0));
-  delay(50 + difficulty);
+  delay(difficulty);
 
   if (isTouched == 1 && currentlyLightedRowIndex < 4 && currentlyLightedRowIndex >= 0)
   {
