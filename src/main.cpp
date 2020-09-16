@@ -10,15 +10,18 @@
 void flashAllLEDs(uint32_t color);
 void clearAllLEDs();
 void lightLine(int lineIndex, uint32_t color);
-void winAnimation();
 void looseAnimation();
-void startGame();
+void restartGame();
+void startGameLoop();
+void changeGameDirection();
+void triggerGameLost();
 
 bool testRun = true;
 bool isTouched = false;
 bool gameStarted = false;
 bool isUpwards = false;
 int currentlyLightedRowIndex = 0;
+int gameLoopCounter = 0;
 
 /* Set up neopixel led strip as described in their documentation */
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
@@ -36,7 +39,7 @@ void setup()
   /* Basic strip setup, adjust brightness as needed */
   strip.begin();
   strip.show();
-  strip.setBrightness(50);
+  strip.setBrightness(150);
 
   pinMode(SENSOR_PIN, INPUT);
   currentlyLightedRowIndex = LED_PER_LINE_COUNT - 1;
@@ -47,62 +50,73 @@ void loop()
 {
   isTouched = digitalRead(SENSOR_PIN);
 
+  if (!gameStarted && isTouched)
+  {
+    restartGame();
+  }
+
   if (gameStarted)
   {
-    lightLine(currentlyLightedRowIndex, strip.Color(255, 0, 0));
-    delay(300);
+    startGameLoop();
+  }
+}
 
-    Serial.print("Index: ");
-    Serial.println(currentlyLightedRowIndex);
-    Serial.print("Is Touched: ");
-    Serial.println(isTouched);
-    if (isTouched == 1 && currentlyLightedRowIndex < 3 && currentlyLightedRowIndex >= 0)
-    {
-      // Go up again
-      isUpwards = true;
-    }
-    else if (currentlyLightedRowIndex <= 0)
-    {
-      // Game lost
-      gameStarted = false;
-      looseAnimation();
-    }
+void restartGame()
+{
+  gameStarted = true;
+  currentlyLightedRowIndex = LED_PER_LINE_COUNT - 1;
+  gameLoopCounter = 0;
+}
 
-    lightLine(currentlyLightedRowIndex, strip.Color(0, 0, 0));
+void startGameLoop()
+{
+  int difficulty = int(100 / (gameLoopCounter + 1));
 
+  /* Light up the current row */
+  lightLine(currentlyLightedRowIndex, strip.Color(255, 0, 0));
+  delay(50 + difficulty);
+
+  if (isTouched == 1 && currentlyLightedRowIndex < 4 && currentlyLightedRowIndex >= 0)
+  {
+    // Go up again
     if (!isUpwards)
     {
-      currentlyLightedRowIndex--;
-    }
-    else if (currentlyLightedRowIndex >= LED_PER_LINE_COUNT - 1)
-    {
-      isUpwards = false;
-      currentlyLightedRowIndex--;
-    }
-    else
-    {
-      currentlyLightedRowIndex++;
+      changeGameDirection();
     }
   }
-}
-
-void lightLinesUpwards(int rowIndex)
-{
-}
-
-void winAnimation()
-{
-  for (int i = LED_PER_LINE_COUNT - 1; i >= 0; i--)
+  else if (currentlyLightedRowIndex <= 0)
   {
-    lightLine(i, strip.Color(0, 255, 0));
-    delay(100);
+    triggerGameLost();
   }
-  delay(500);
-  clearAllLEDs();
-  delay(300);
-  flashAllLEDs(strip.Color(0, 255, 0));
-  delay(300);
-  clearAllLEDs();
+
+  // Turn off the current row after a delay
+  lightLine(currentlyLightedRowIndex, strip.Color(0, 0, 0));
+
+  if (!isUpwards)
+  {
+    currentlyLightedRowIndex--;
+  }
+  else if (currentlyLightedRowIndex >= LED_PER_LINE_COUNT - 1)
+  {
+    /* Light rows below if the uppermost row was lit */
+    changeGameDirection();
+    currentlyLightedRowIndex--;
+  }
+  else
+  {
+    currentlyLightedRowIndex++;
+  }
+}
+
+void triggerGameLost()
+{
+  gameStarted = false;
+  looseAnimation();
+}
+
+void changeGameDirection()
+{
+  isUpwards = !isUpwards;
 }
 
 void looseAnimation()
